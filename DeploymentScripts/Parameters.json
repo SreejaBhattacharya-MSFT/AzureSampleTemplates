@@ -1,0 +1,13 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "value": "<User Display name>" 
+        },
+        "identity": {
+            "value": "<Resource id of user assigned managed identity used for deployment script to authenticate and fetch user from Azure AD>" 
+        }
+    }
+
+}
