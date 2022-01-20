@@ -1,0 +1,69 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "name": {
+            "type": "string"
+        },
+        "utcValue": {
+            "type": "string",
+            "defaultValue": "[utcNow()]"
+        },
+        "identity": {
+            "type": "string"
+        }
+    },
+    "variables": {
+        "roleDefinitionId": "b24988ac-6180-42a0-ab88-20f7382dd24c", //Reader/Contributor
+        "roleAssignmentName": "[guid(resourceGroup().id)]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Resources/deploymentScripts",
+            "apiVersion": "2020-10-01",
+            "name": "scriptInTemplate1",
+            "location": "[resourceGroup().location]",
+            "kind": "AzurePowerShell", 
+            "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                    "[parameters('identity')]": {
+                    }
+                }
+            },
+            "properties": {
+                "forceUpdateTag": "[parameters('utcValue')]",
+                "azPowerShellVersion": "6.4",
+                "timeout": "PT1H",
+                "arguments": "[concat('-name', ' ', concat('\\\"', parameters('name'), '\\\"'))]",
+                "scriptContent": "
+          param([string] $name)
+          $p = Get-AzADUser -DisplayName $name
+          $output = $p.Id
+          Write-Output $output
+          $DeploymentScriptOutputs = @{}
+          $DeploymentScriptOutputs['text'] = $output
+        ",
+                "cleanupPreference": "Always",
+                "retentionInterval": "P1D"
+            }
+        },
+        {
+            "dependsOn": [ "[resourceId('Microsoft.Resources/deploymentScripts', 'scriptInTemplate1')]" ],
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2020-04-01-preview",
+            "name": "[variables('roleAssignmentName')]",
+            "properties": {
+                "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('roleDefinitionId'))]",
+                "principalId": "[reference('scriptInTemplate1').outputs.text]",
+                "scope": "[resourceGroup().id]"
+            }
+        }
+    ],
+    "outputs": {
+        "result": {
+            "value": "[reference('scriptInTemplate1').outputs.text]",
+            "type": "string"
+        }
+    }
+}
